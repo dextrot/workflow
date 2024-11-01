@@ -1,0 +1,53 @@
+name: Test Release Tag Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to test (optional)'
+        required: false
+        type: string
+
+jobs:
+  get-release-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.set_tag.outputs.tag }}
+    steps:
+      - name: Set release tag
+        id: set_tag
+        run: |
+          # Scenario 1: Tag from workflow dispatch input
+          if [ -n "${{ github.event.inputs.release_tag }}" ]; then
+            echo "Using tag from workflow dispatch input"
+            echo "tag=${{ github.event.inputs.release_tag }}" >> $GITHUB_OUTPUT
+          
+          # Scenario 2: Simulate a release event tag
+          elif [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "Using tag from release event"
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          
+          # Scenario 3: Fetch latest release (simulated with echo)
+          else
+            echo "Simulating latest release tag fetch"
+            LATEST_TAG=$(curl -L -s https://github.com/layer5io/sistent/releases/latest | grep -oP 'releases/tag/\K[^"]+' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            echo "tag=${LATEST_TAG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Display Selected Tag
+        run: |
+          echo "Selected Release Tag: ${{ steps.set_tag.outputs.tag }}"
+
+  dependent-job:
+    needs: get-release-tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Tag Propagation
+        run: |
+          echo "Tag received from previous job: ${{ needs.get-release-tag.outputs.release_tag }}"
+          
+          # Simulate some actions with the tag
+          if [ -z "${{ needs.get-release-tag.outputs.release_tag }}" ]; then
+            echo "No tag was passed!"
+            exit 1
+          fi
