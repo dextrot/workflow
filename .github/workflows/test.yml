@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag to test (optional)'
+        description: 'Release tag to bump to (defaults to latest if empty)'
         required: false
         type: string
 
